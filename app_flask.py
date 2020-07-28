@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 MODEL = None
 DEVICE = "cpu"
-model_path = "/home/jonas/speech-technologies/bert_punctuation/models/Bert_punctuation_Bert_1M_sentences_20200728_075223/model.bin"
+model_path = "model.bin"
 
 
 def sentence_prediction(sentence):
