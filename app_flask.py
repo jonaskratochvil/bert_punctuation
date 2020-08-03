@@ -6,12 +6,18 @@ import torch.nn as nn
 import hyperparameters as hp
 import torch.nn.functional as F
 import ast
+import argparse
 
 from flask import Flask
 from flask import request
 from model_punctuation import BertPunc
 from dataset_punctuation import BERTDataset
-from utils_punctuation import postprocess_text, postprocess_text_with_confidence, load_live_asr_input, live_asr_output
+from utils_punctuation import (
+    postprocess_text,
+    postprocess_text_with_confidence,
+    load_live_asr_input,
+    live_asr_output,
+)
 
 app = Flask(__name__)
 
@@ -19,6 +25,11 @@ MODEL = None
 DEVICE = hp.LIVE_ASR_DEVICE
 model_path = "model.bin"
 
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="checkpoints2/JasperDecoderForCTC-STEP-516250.pt")                                                                                                                                       
+    parser.add_argument("--port", default="Port number")                                                                                                                                                                     
+    return parser.parse_args() 
 
 def sentence_prediction(sentence):
     sentence = sentence.split()
@@ -34,25 +45,26 @@ def sentence_prediction(sentence):
 
     logits = MODEL(ids=ids, mask=mask, token_type_ids=token_type_ids)
     prediction = (
-        logits.argmax(2)
-        .cpu()
-        .numpy()
-        .reshape(-1)[: len(tokenized_sentence)]
-        .tolist()
+        logits.argmax(2).cpu().numpy().reshape(-1)[: len(tokenized_sentence)].tolist()
     )
 
     if hp.OUTPUT_CONFIDENCES:
 
         logits = F.softmax(logits, dim=2)
-        logits_confidence = [values[label].item() for values,label in zip(logits[0],prediction)]
+        logits_confidence = [
+            values[label].item() for values, label in zip(logits[0], prediction)
+        ]
 
-        return postprocess_text_with_confidence(sentence, prediction, capitalization, logits_confidence)
-
+        return postprocess_text_with_confidence(
+            sentence, prediction, capitalization, logits_confidence
+        )
 
     if hp.TUNE_CONFIDENCES:
         # This is for confidence hyperparameter tuning
         logits = F.softmax(logits, dim=2)
-        logits_confidence = [values[label].item() for values,label in zip(logits[0],prediction)]
+        logits_confidence = [
+            values[label].item() for values, label in zip(logits[0], prediction)
+        ]
         logits_confidence = logits_confidence[1:-1]
         prediction = prediction[1:-1]
         for i, log in enumerate(logits_confidence):
@@ -104,9 +116,11 @@ def predict():
 
 
 if __name__ == "__main__":
+    args = get_args()
+
     MODEL = BertPunc()
     MODEL = nn.DataParallel(MODEL)
     MODEL.load_state_dict(torch.load(model_path, map_location=torch.device(DEVICE)))
     MODEL.to(DEVICE)
     MODEL.eval()
-    app.run(host=hp.HOST, port=hp.PORT)
+    app.run(host=args.host, port=args.port)

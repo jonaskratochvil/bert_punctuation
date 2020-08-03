@@ -8,10 +8,12 @@ from model_punctuation import BertPunc
 from torch import nn
 from tqdm import tqdm
 
+
 def load_json(json_file):
-    with open(json_file, 'r') as f:
+    with open(json_file, "r") as f:
         text = json.load(f)
     return text
+
 
 def load_live_asr_input(json_file):
     text = json_file
@@ -21,12 +23,14 @@ def load_live_asr_input(json_file):
 
     return final_sentence
 
+
 def live_asr_output(prediction, original_data):
     prediction = prediction.split()
     for i in range(len(original_data["words"])):
         original_data["words"][i]["word"] = prediction[i]
 
     return original_data
+
 
 def postprocess_text_with_confidence(sentence, labels, capitalization, confidences):
     final_sentence = ""
@@ -52,7 +56,9 @@ def postprocess_text_with_confidence(sentence, labels, capitalization, confidenc
         else:
             final_sentence = final_sentence + " " + word + ","
 
-    final_sentence = final_sentence[:-1] + "." if final_sentence[-1] == "," else final_sentence
+    final_sentence = (
+        final_sentence[:-1] + "." if final_sentence[-1] == "," else final_sentence
+    )
 
     return final_sentence.strip()
 
@@ -115,19 +121,26 @@ def predict_sentences(current_model_path, num_classes, dropout):
         print(f"Gold: {gold}")
         print(f"Prediction: {output}")
 
+
 def predict_validation_set():
     from run_punctuation import load_file, encode_data
+
     current_model_path = "/home/jonas/speech-technologies/bert_punctuation/models/Bert_punctuation_punctuation_parrot_final_20200729_125950/model_20200729_143254.pt"
     device = "cuda"
     final_loss = 0
     val_f1s = []
 
     data_valid = load_file(hp.VALID_FILE)
-    X_valid, y_valid = encode_data(data_valid, hp.PUNCTUATION_ENC, hp.MERGE_NUMBER, train=False)
+    X_valid, y_valid = encode_data(
+        data_valid, hp.PUNCTUATION_ENC, hp.MERGE_NUMBER, train=False
+    )
 
     valid_dataset = BERTDataset(X_valid, y_valid)
     valid_loader = torch.utils.data.DataLoader(
-        valid_dataset, batch_size=hp.BATCH_SIZE, num_workers=hp.NUM_WORKERS, shuffle=False
+        valid_dataset,
+        batch_size=hp.BATCH_SIZE,
+        num_workers=hp.NUM_WORKERS,
+        shuffle=False,
     )
 
     model = BertPunc().to(device)
@@ -160,7 +173,6 @@ def predict_validation_set():
             )
     print(np.array(val_f1s).mean(axis=0))
     print(final_loss / len(data_loader))
-
 
 
 if __name__ == "__main__":

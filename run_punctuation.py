@@ -50,6 +50,7 @@ config.min_merge = hp.MIN_MERGE
 config.max_merge = hp.MAX_MERGE
 config.num_replication = hp.NUM_REPLICATION
 
+
 def load_file(filename):
     with open(filename, "r", encoding="utf-8") as f:
         return [t.strip() for t in f.readlines()]
@@ -68,7 +69,7 @@ def encode_data(data, punctuation_enc, merge_number=4, train=True):
         # include dummy punctuation if it is missing (e.g. during inference)
         if len(line.split(" ")) == 1:
             continue
-        text = ' '.join(line.split()[:-1])
+        text = " ".join(line.split()[:-1])
         punc = line.split()[-1]
         if punc == "!":
             continue
@@ -86,7 +87,9 @@ def encode_data(data, punctuation_enc, merge_number=4, train=True):
             Y.append(targets)
             sentences = ""
             targets = []
-            merge_number = randrange(hp.MIN_MERGE,hp.MAX_MERGE+1) if train else merge_number
+            merge_number = (
+                randrange(hp.MIN_MERGE, hp.MAX_MERGE + 1) if train else merge_number
+            )
 
     return X, Y
 
@@ -102,21 +105,31 @@ def run():
     # times and each time we get different contexts
     X_train, y_train = [], []
     for _ in range(hp.NUM_REPLICATION):
-        X, y = encode_data(data_train, config.punctuation_enc, config.merge_number, train=True)
+        X, y = encode_data(
+            data_train, config.punctuation_enc, config.merge_number, train=True
+        )
         X_train = X_train + X
         y_train = y_train + y
 
-    X_valid, y_valid = encode_data(data_valid, config.punctuation_enc, config.merge_number, train=False)
+    X_valid, y_valid = encode_data(
+        data_valid, config.punctuation_enc, config.merge_number, train=False
+    )
 
     train_dataset = BERTDataset(X_train, y_train)
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=config.batch_size, num_workers=config.num_workers, shuffle=True
+        train_dataset,
+        batch_size=config.batch_size,
+        num_workers=config.num_workers,
+        shuffle=True,
     )
 
     valid_dataset = BERTDataset(X_valid, y_valid)
     valid_loader = torch.utils.data.DataLoader(
-        valid_dataset, batch_size=config.batch_size, num_workers=config.num_workers, shuffle=False
+        valid_dataset,
+        batch_size=config.batch_size,
+        num_workers=config.num_workers,
+        shuffle=False,
     )
 
     model = BertPunc().to(device)
@@ -153,7 +166,9 @@ def run():
 
     optimizer = optim.AdamW(model.parameters(), lr=config.learning_rate)
     scheduler = get_linear_schedule_with_warmup(
-        optimizer, num_warmup_steps=hp.WARMUP_STEPS, num_training_steps=num_train_steps_top
+        optimizer,
+        num_warmup_steps=hp.WARMUP_STEPS,
+        num_training_steps=num_train_steps_top,
     )
 
     print("=> Training top layer")
@@ -179,16 +194,16 @@ def run():
         end = time.time()
 
         wandb.log(
-                    {
-                   'epoch': epoch,
-                   'train loss': train_loss,
-                   'validation loss': validation_loss,
-                   'F1 O': val_f1[0],
-                   'F1 .': val_f1[1],
-                   'F1 ?': val_f1[2],
-                   'F1 ,': val_f1[3]
-                   }
-                )
+            {
+                "epoch": epoch,
+                "train loss": train_loss,
+                "validation loss": validation_loss,
+                "F1 O": val_f1[0],
+                "F1 .": val_f1[1],
+                "F1 ?": val_f1[2],
+                "F1 ,": val_f1[3],
+            }
+        )
 
         print(
             f"Epoch time:          {end-start:.4f}s\n"
@@ -202,7 +217,9 @@ def run():
         p.requires_grad = True
 
     scheduler = get_linear_schedule_with_warmup(
-        optimizer, num_warmup_steps=hp.WARMUP_STEPS, num_training_steps=num_train_steps_all
+        optimizer,
+        num_warmup_steps=hp.WARMUP_STEPS,
+        num_training_steps=num_train_steps_all,
     )
     print("=> Training all layers")
     for epoch in range(config.epochs_all_layers):
@@ -218,7 +235,6 @@ def run():
             config.epochs_all_layers,
             scaler,
         )
-
 
         print("=> Evaluation")
         validation_loss, val_f1 = engine_punctuation.evaluate(
@@ -239,15 +255,15 @@ def run():
         )
 
         wandb.log(
-                    {
-                   'train loss': train_loss,
-                   'validation loss': validation_loss,
-                   'F1 O': val_f1[0],
-                   'F1 .': val_f1[1],
-                   'F1 ?': val_f1[2],
-                   'F1 ,': val_f1[3]
-                   }
-                )
+            {
+                "train loss": train_loss,
+                "validation loss": validation_loss,
+                "F1 O": val_f1[0],
+                "F1 .": val_f1[1],
+                "F1 ?": val_f1[2],
+                "F1 ,": val_f1[3],
+            }
+        )
 
         if validation_loss < best_loss and hp.SAVE_MODEL:
             model_name = f"{config.model_path}/model_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
