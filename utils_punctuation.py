@@ -14,7 +14,6 @@ def load_json(json_file):
     return text
 
 def load_live_asr_input(json_file):
-    # text = load_json(json_file)
     text = json_file
     final_sentence = ""
     for w in text["words"]:
