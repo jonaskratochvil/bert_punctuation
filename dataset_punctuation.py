@@ -52,9 +52,12 @@ class BERTDataset:
         token_type_ids = [0] * len(ids)
 
         padding_len = self.max_len - len(ids)
-        ids = ids + ([0] * padding_len)  # pad inputs
+        # Here always use 0, good resource: https://www.kaggle.com/debanga/huggingface-tokenizers-cheat-sheet
         mask = mask + ([0] * padding_len)  # pad mask
         token_type_ids = token_type_ids + ([0] * padding_len)
+
+        # here ue PAD symbol
+        ids = ids + ([0] * padding_len)  # pad inputs
         target_labels = target_labels + ([0] * padding_len)
 
         return {

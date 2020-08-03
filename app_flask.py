@@ -4,17 +4,18 @@ import flask
 import time
 import torch.nn as nn
 import hyperparameters as hp
+import torch.nn.functional as F
 
 from flask import Flask
 from flask import request
 from model_punctuation import BertPunc
 from dataset_punctuation import BERTDataset
-from utils_punctuation import postprocess_text
+from utils_punctuation import postprocess_text, postprocess_text_with_confidence, load_live_asr_input, live_asr_output
 
 app = Flask(__name__)
 
 MODEL = None
-DEVICE = "cpu"
+DEVICE = hp.LIVE_ASR_DEVICE
 model_path = "model.bin"
 
 
@@ -30,24 +31,55 @@ def sentence_prediction(sentence):
     mask = loader[0]["mask"].to(DEVICE).unsqueeze(0)
     token_type_ids = loader[0]["token_type_ids"].to(DEVICE).unsqueeze(0)
 
-    punctuation = MODEL(ids=ids, mask=mask, token_type_ids=token_type_ids)
+    logits = MODEL(ids=ids, mask=mask, token_type_ids=token_type_ids)
     prediction = (
-        punctuation.argmax(2)
+        logits.argmax(2)
         .cpu()
         .numpy()
         .reshape(-1)[: len(tokenized_sentence)]
         .tolist()
     )
 
+    if hp.OUTPUT_CONFIDENCES:
+
+        logits = F.softmax(logits, dim=2)
+        logits_confidence = [values[label].item() for values,label in zip(logits[0],prediction)]
+
+        return postprocess_text_with_confidence(sentence, prediction, capitalization, logits_confidence)
+
+
+    if hp.TUNE_CONFIDENCES:
+        # This is for confidence hyperparameter tuning
+        logits = F.softmax(logits, dim=2)
+        logits_confidence = [values[label].item() for values,label in zip(logits[0],prediction)]
+        logits_confidence = logits_confidence[1:-1]
+        prediction = prediction[1:-1]
+        for i, log in enumerate(logits_confidence):
+            if log < hp.CONFIDENCE_THRESHOLD:
+                prediction[i] = 0
+
+        return prediction
+
     return postprocess_text(sentence, prediction, capitalization)
 
-@app.route("/predict", methods=['POST'])
+
+@app.route("/predict", methods=["POST"])
 def predict():
     # sentence = request.args.get("sentence")
     data = request.get_json(force=True)
     sentence = data["text"]
+
+    if hp.LIVE_ASR:
+        sentence = load_live_asr_input(data["text"])
+
     start_time = time.time()
     prediction = sentence_prediction(sentence)
+    prediction = str(prediction)
+
+    if hp.LIVE_ASR:
+        response = live_asr_output(prediction, data["text"])
+        return flask.jsonify(response)
+
     response = {}
     response["response"] = {
         "sentence": str(sentence),
@@ -63,4 +95,4 @@ if __name__ == "__main__":
     MODEL.load_state_dict(torch.load(model_path, map_location=torch.device(DEVICE)))
     MODEL.to(DEVICE)
     MODEL.eval()
-    app.run(host="127.0.0.1", port=9902)
+    app.run(host=hp.HOST, port=hp.PORT)

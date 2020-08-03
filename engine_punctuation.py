@@ -10,10 +10,10 @@ from torch.cuda import amp
 
 def train(data_loader, model, optimizer, device, scheduler, epoch, num_epochs, scaler):
     model.train()
-    loop = tqdm(data_loader, total=len(data_loader), leave=False)
+    loop = tqdm(enumerate(data_loader), total=len(data_loader), leave=False)
     final_loss = 0
 
-    for data in loop:
+    for batch_idx, data in loop:
         for k, v in data.items():
             data[k] = v.to(device)
 
