@@ -8,3 +8,9 @@ To start the flask server run:
 ```
 sudo docker run -p 9901:9901 -ti punctuation_model:api python3 app_flask.py --host "127.0.0.1" --port "9901"
 ```
+
+To query the server run:
+
+```
+python3 query.py text_file_with_one_sentence_per_line --host "127.0.0.1" --port "9901"
+```
