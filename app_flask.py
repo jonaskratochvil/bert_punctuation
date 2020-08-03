@@ -17,8 +17,7 @@ app = Flask(__name__)
 
 MODEL = None
 DEVICE = hp.LIVE_ASR_DEVICE
-# model_path = "/home/jonas/speech-technologies/bert_punctuation/models/Bert_punctuation_punctuation_parrot_final_20200729_125950/model_20200729_143254.pt"
-model_path = "/home/jonas/speech-technologies/bert_punctuation/models/Bert_punctuation_punctuation_new_3replicas_top10_20200802_145359/model_20200803_005754.pt"
+model_path = "model.bin"
 
 
 def sentence_prediction(sentence):
@@ -69,7 +68,15 @@ def sentence_prediction(sentence):
 def predict():
     # sentence = request.args.get("sentence")
     data = request.get_json(force=True)
-    sentence = data["text"]
+    sentence = data["text"].strip()
+    if len(sentence) == 0:
+        response = {}
+        response["response"] = {
+            "sentence": "",
+            "prediction": "",
+            "time_taken": 0,
+        }
+        return flask.jsonify(response)
 
     if hp.LIVE_ASR:
         original_data = ast.literal_eval(data["text"])
