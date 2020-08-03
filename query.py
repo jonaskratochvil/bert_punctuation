@@ -13,4 +13,7 @@ text = read_text(sys.argv[1])
 for line in text:
     r = requests.post(url, json={"text": f"{line}"}).json()
 
-    print(r["response"]["prediction"])
+    if hp.LIVE_ASR:
+        print(r)
+    else:
+        print(r["response"]["prediction"])

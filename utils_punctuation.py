@@ -14,7 +14,8 @@ def load_json(json_file):
     return text
 
 def load_live_asr_input(json_file):
-    text = load_json(json_file)
+    # text = load_json(json_file)
+    text = json_file
     final_sentence = ""
     for w in text["words"]:
         final_sentence = final_sentence + " " + w["word"]
@@ -22,7 +23,6 @@ def load_live_asr_input(json_file):
     return final_sentence
 
 def live_asr_output(prediction, original_data):
-    original_data = load_json(original_data)
     prediction = prediction.split()
     for i in range(len(original_data["words"])):
         original_data["words"][i]["word"] = prediction[i]
