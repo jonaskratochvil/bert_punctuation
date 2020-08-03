@@ -5,6 +5,7 @@ import time
 import torch.nn as nn
 import hyperparameters as hp
 import torch.nn.functional as F
+import ast
 
 from flask import Flask
 from flask import request
@@ -16,7 +17,8 @@ app = Flask(__name__)
 
 MODEL = None
 DEVICE = hp.LIVE_ASR_DEVICE
-model_path = "model.bin"
+# model_path = "/home/jonas/speech-technologies/bert_punctuation/models/Bert_punctuation_punctuation_parrot_final_20200729_125950/model_20200729_143254.pt"
+model_path = "/home/jonas/speech-technologies/bert_punctuation/models/Bert_punctuation_punctuation_new_3replicas_top10_20200802_145359/model_20200803_005754.pt"
 
 
 def sentence_prediction(sentence):
@@ -70,14 +72,15 @@ def predict():
     sentence = data["text"]
 
     if hp.LIVE_ASR:
-        sentence = load_live_asr_input(data["text"])
+        original_data = ast.literal_eval(data["text"])
+        sentence = load_live_asr_input(original_data)
 
     start_time = time.time()
     prediction = sentence_prediction(sentence)
     prediction = str(prediction)
 
     if hp.LIVE_ASR:
-        response = live_asr_output(prediction, data["text"])
+        response = live_asr_output(prediction, original_data)
         return flask.jsonify(response)
 
     response = {}
